@@ -1,0 +1,2 @@
+data/esco_skills.json filter=lfs diff=lfs merge=lfs -text
+data/esco_embeddings.npy filter=lfs diff=lfs merge=lfs -text
