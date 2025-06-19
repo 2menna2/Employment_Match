@@ -48,7 +48,7 @@ Set Up the Gemini API Key:
 Create a .env file in the project root:echo GEMINI_API_KEY=your-gemini-api-key-here > .env
 
 
-Replace your-gemini-api-key-here with your key from https://makersuite.google.com/.
+Replace your-gemini-api-key-here with your
 
 
 Prepare the ESCO Skills Taxonomy:
@@ -56,7 +56,7 @@ Prepare the ESCO Skills Taxonomy:
 Download the ESCO v1.2.0 skills dataset (skills_en.csv) from https://esco.ec.europa.eu/en/download.
 Move skills_en.csv to the data/ folder:mkdir data
 copy C:\Users\LENOVO\Downloads\skills_en.csv\skills_en.csv data\skills_en.csv  # On Windows
-cp ~/Downloads/skills_en.csv/skills_en.csv data\skills_en.csv  # On Linux/Mac
+cp ~/Downloads/skills_en.csv/skills_en.csv data/skills_en.csv  # On Linux/Mac
 
 
 Convert skills_en.csv to data/esco_skills.json:python convert_esco_to_json.py
@@ -72,44 +72,27 @@ Run the embedding generation script (only needed once or when esco_skills.json c
 This creates data/esco_embeddings.npy. If it fails with a name 'torch' is not defined error, ensure the script includes import torch and reinstall dependencies.
 
 
-Run the Scripts:
-
-For job descriptions:python extract_skills.py
-
-
-For CVs (PDF or text):python extract_cv_skills.py
+Run the Script:
+python extract_skills.py
 
 
-These process a sample job description or CV and output extracted and standardized skills in JSON format.
+This processes a sample job description and outputs extracted and standardized skills in JSON format.
 
 
 
 Usage
 
-Extract Skills from Job Description:
+Modify the Job Description:
 
 Edit the job_description variable in extract_skills.py:job_description = """Your custom job description here."""
 
 
-Run:python extract_skills.py
+Run the script to extract skills:python extract_skills.py
 
 
 
 
-Extract Skills from CV:
-
-For PDF CVs, edit the pdf_path variable in extract_cv_skills.py:pdf_path = "data/your_cv.pdf"
-
-
-Or use text CVs by editing cv_text in the main() function for testing:cv_text = """Your CV text here."""
-
-
-Run:python extract_cv_skills.py
-
-
-
-
-Expected Output (for both scripts):
+Expected Output:
 {
   "standardized": [
     "Python (computer programming)",
@@ -130,13 +113,12 @@ Expected Output (for both scripts):
 }
 
 
-Configuration Options (in both scripts):
+Configuration Options:
 
 SIMILARITY_THRESHOLD (default: 0.4): Controls embedding-based skill matching sensitivity.
 FUZZY_THRESHOLD (default: 90): Controls fuzzy matching sensitivity for low-similarity skills.
 BATCH_SIZE (default: 100): Adjusts memory usage for embedding large ESCO datasets.
 EMBEDDER_MODEL: Switch to sentence-transformers/all-mpnet-base-v2 for improved matching if needed.
-TOP_N (default: 3): Number of top matches logged for each raw skill.
 
 
 
@@ -144,22 +126,18 @@ Folder Structure
 
 data/:
 skills_en.csv: ESCO v1.2.0 skills taxonomy (CSV)
-esco_skills.json: Converted ESCO skills in JSON format (tracked with Git LFS)
-esco_embeddings.npy: Precomputed ESCO skill embeddings (tracked with Git LFS)
+esco_skills.json: Converted ESCO skills in JSON format
+esco_embeddings.npy: Precomputed ESCO skill embeddings
 
 
 docs/: Documentation (currently empty)
 tests/: Unit tests (currently empty)
-extract_skills.py: Main skill extraction script for job descriptions
-extract_cv_skills.py: Skill extraction script for CVs (text or PDF)
+extract_skills.py: Main skill extraction script
 convert_esco_to_json.py: Script to convert ESCO CSV to JSON
 generate_embeddings.py: Script to precompute ESCO embeddings
 requirements.txt: Python dependencies
 .env: Environment variables (not tracked by Git)
-.gitignore: Excludes .env, virtual environment, and temporary files
-.gitattributes: Configures Git LFS tracking
-.gitattributes: Configures Git LFS tracking
-LICENSE: MIT License
+.gitignore: Excludes .env, virtual environment, and large data files
 README.md: This file
 
 Dependencies
@@ -174,14 +152,13 @@ setuptools==70.0.0
 python-dotenv==1.0.1
 google-generativeai==0.7.2
 rapidfuzz==3.9.7
-PyPDF2==3.0.1
 
 Troubleshooting
 
 Empty or Incorrect standardized Skills:
 
 Check logs for Top-3 matches and Fuzzy match entries in the terminal output.
-Lower SIMILARITY_THRESHOLD to 0.3 or FUZZY_THRESHOLD to 80 in extract_skills.py or extract_cv_skills.py:SIMILARITY_THRESHOLD = 0.3
+Lower SIMILARITY_THRESHOLD to 0.3 or FUZZY_THRESHOLD to 80 in extract_skills.py:SIMILARITY_THRESHOLD = 0.3
 FUZZY_THRESHOLD = 80
 
 
@@ -192,25 +169,16 @@ Update requirements.txt:echo "sentence-transformers==2.7.0" >> requirements.txt
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 
-Update generate_embeddings.py to match EMBEDDER_MODEL and regenerate embeddings:python generate_embeddings.py
+Regenerate embeddings:python generate_embeddings.py
 
 
 
 
-
-
-PDF Processing Errors:
-
-Ensure PyPDF2==3.0.1 is installed:pip install PyPDF2==3.0.1 -i https://pypi.tuna.tsinghua.edu.cn/simple
-
-
-Verify the PDF file is readable and not corrupted.
-If text extraction fails (e.g., scanned PDFs), consider using OCR tools like pytesseract.
 
 
 Memory Issues:
 
-Reduce BATCH_SIZE to 50 in extract_skills.py, extract_cv_skills.py, and generate_embeddings.py if processing ~13,939 skills causes errors:BATCH_SIZE = 50
+Reduce BATCH_SIZE to 50 in extract_skills.py and generate_embeddings.py if processing ~13,939 skills causes errors:BATCH_SIZE = 50
 
 
 
@@ -237,7 +205,12 @@ Install hf_xet for faster Hugging Face model downloads:pip install hf_xet -i htt
 
 Large File Handling:
 
-data/esco_skills.json and data/esco_embeddings.npy are tracked with Git LFS. Ensure Git LFS is installed:git lfs install
+If data/esco_skills.json or data/esco_embeddings.npy exceeds 100MB, use Git LFS:git lfs install
+git lfs track "data/esco_skills.json"
+git lfs track "data/esco_embeddings.npy"
+git add .gitattributes data/esco_skills.json data/esco_embeddings.npy
+git commit -m "Track large files with Git LFS"
+git push origin main
 
 
 
