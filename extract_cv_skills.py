@@ -20,7 +20,10 @@ logger = logging.getLogger(__name__)
 # Check for required dependencies
 try:
     import google.generativeai as genai
-    from transformers import AutoModel, AutoTokenizer
+    from google.generativeai.generative_models import GenerativeModel
+    from google.generativeai.types import GenerationConfig
+    from google.generativeai.client import configure
+    from sentence_transformers import SentenceTransformer
     from sklearn.metrics.pairwise import cosine_similarity
 except ImportError as e:
     logger.error(f"Missing dependencies: {e}. Install with: pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple")
@@ -42,8 +45,8 @@ TOP_N = 3  # Log top-3 matches for debugging
 
 # Initialize Gemini API client
 try:
-    genai.configure(api_key=GEMINI_API_KEY)
-    gemini_client = genai.GenerativeModel(GEMINI_MODEL)
+    configure(api_key=GEMINI_API_KEY)
+    gemini_client = GenerativeModel(GEMINI_MODEL)
     logger.info(f"Successfully initialized Gemini client with model: {GEMINI_MODEL}")
 except Exception as e:
     logger.error(f"Failed to initialize Gemini client: {e}")
@@ -90,10 +93,9 @@ def load_esco_skills(file_path: str) -> List[Dict[str, str]]:
 def load_embedder():
     """Load sentence transformer model."""
     try:
-        embedder = AutoModel.from_pretrained(EMBEDDER_MODEL)
-        embedder_tokenizer = AutoTokenizer.from_pretrained(EMBEDDER_MODEL)
+        embedder = SentenceTransformer(EMBEDDER_MODEL)
         logger.info(f"Successfully loaded embedder: {EMBEDDER_MODEL}")
-        return embedder, embedder_tokenizer
+        return embedder
     except Exception as e:
         logger.error(f"Failed to load embedder: {e}")
         sys.exit(1)
@@ -103,8 +105,8 @@ def summarize_cv(cv_text: str) -> str:
     prompt = f"Summarize the following CV, focusing on technical and soft skills. Return a comma-separated list of skills:\n{cv_text}"
     try:
         response = gemini_client.generate_content(
-            contents=[{"role": "user", "parts": [{"text": prompt}]}],
-            generation_config=genai.types.GenerationConfig(
+            prompt,
+            generation_config=GenerationConfig(
                 temperature=0.7,
                 max_output_tokens=70
             )
@@ -116,16 +118,14 @@ def summarize_cv(cv_text: str) -> str:
         logger.error(f"Error in Gemini API call: {e}")
         return ""
 
-def get_embeddings(texts: List[str], embedder: Any, embedder_tokenizer: Any, batch_size: int = BATCH_SIZE) -> np.ndarray:
+def get_embeddings(texts: List[str], embedder: Any, batch_size: int = BATCH_SIZE) -> np.ndarray:
     """Generate embeddings in batches."""
     embeddings = []
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         try:
-            inputs = embedder_tokenizer(batch, padding=True, truncation=True, max_length=512, return_tensors="pt")
-            with torch.no_grad():
-                batch_embeddings = embedder(**inputs).last_hidden_state.mean(dim=1)
-            embeddings.append(batch_embeddings.cpu().numpy())
+            batch_embeddings = embedder.encode(batch)
+            embeddings.append(batch_embeddings)
         except Exception as e:
             logger.error(f"Error generating embeddings for batch {i//batch_size + 1}: {e}")
             return np.array([])
@@ -135,15 +135,22 @@ def load_precomputed_embeddings(file_path: str) -> np.ndarray:
     """Load precomputed embeddings from file."""
     if os.path.exists(file_path):
         try:
-            embeddings = np.load(file_path)
+            # Try loading with allow_pickle=True first
+            embeddings = np.load(file_path, allow_pickle=True)
             logger.info(f"Loaded precomputed embeddings from {file_path}")
             return embeddings
         except Exception as e:
             logger.error(f"Failed to load embeddings: {e}")
+            # If loading fails, try to delete the corrupted file
+            try:
+                os.remove(file_path)
+                logger.info(f"Deleted corrupted embeddings file: {file_path}")
+            except:
+                pass
     logger.warning(f"Embeddings file {file_path} not found.")
-    return None
+    return np.array([])  # Return empty array instead of None
 
-def extract_cv_skills(pdf_path: str, esco_skills: List[Dict[str, str]], embedder: Any, embedder_tokenizer: Any) -> Dict[str, List[str]]:
+def extract_cv_skills(pdf_path: str, esco_skills: List[Dict[str, str]], embedder: Any) -> Dict[str, List[str]]:
     """Extract and standardize skills from a CV PDF."""
     cv_text = extract_text_from_pdf(pdf_path)
     if not cv_text:
@@ -158,15 +165,15 @@ def extract_cv_skills(pdf_path: str, esco_skills: List[Dict[str, str]], embedder
     
     # Try loading precomputed embeddings
     esco_embeddings = load_precomputed_embeddings(EMBEDDINGS_FILE_PATH)
-    if esco_embeddings is None:
+    if esco_embeddings.size == 0:
         logger.info("Computing ESCO embeddings as precomputed file not found.")
         esco_texts = [skill["skill"] + ": " + skill["description"] for skill in esco_skills]
-        esco_embeddings = get_embeddings(esco_texts, embedder, embedder_tokenizer)
+        esco_embeddings = get_embeddings(esco_texts, embedder)
         if esco_embeddings.size == 0:
             logger.warning("No embeddings generated for ESCO skills.")
             return {"standardized": [], "raw": raw_skills}
     
-    raw_skill_embeddings = get_embeddings(raw_skills, embedder, embedder_tokenizer)
+    raw_skill_embeddings = get_embeddings(raw_skills, embedder)
     similarities = cosine_similarity(raw_skill_embeddings, esco_embeddings)
     standardized_skills = []
     esco_skill_names = [skill["skill"] for skill in esco_skills]
@@ -196,7 +203,7 @@ def extract_cv_skills(pdf_path: str, esco_skills: List[Dict[str, str]], embedder
     logger.info(f"Raw skills: {raw_skills}")
     return {"standardized": list(set(standardized_skills)), "raw": list(set(raw_skills))}
 
-def extract_cv_skills_from_text(cv_text: str, esco_skills: List[Dict[str, str]], embedder: Any, embedder_tokenizer: Any) -> Dict[str, List[str]]:
+def extract_cv_skills_from_text(cv_text: str, esco_skills: List[Dict[str, str]], embedder: Any) -> Dict[str, List[str]]:
     """Extract and standardize skills from CV text (for fallback)."""
     skill_summary = summarize_cv(cv_text)
     if not skill_summary:
@@ -205,15 +212,15 @@ def extract_cv_skills_from_text(cv_text: str, esco_skills: List[Dict[str, str]],
     raw_skills = [s.strip() for s in skill_summary.split(",") if s.strip()]
     
     esco_embeddings = load_precomputed_embeddings(EMBEDDINGS_FILE_PATH)
-    if esco_embeddings is None:
+    if esco_embeddings.size == 0:
         logger.info("Computing ESCO embeddings as precomputed file not found.")
         esco_texts = [skill["skill"] + ": " + skill["description"] for skill in esco_skills]
-        esco_embeddings = get_embeddings(esco_texts, embedder, embedder_tokenizer)
+        esco_embeddings = get_embeddings(esco_texts, embedder)
         if esco_embeddings.size == 0:
             logger.warning("No embeddings generated for ESCO skills.")
             return {"standardized": [], "raw": raw_skills}
     
-    raw_skill_embeddings = get_embeddings(raw_skills, embedder, embedder_tokenizer)
+    raw_skill_embeddings = get_embeddings(raw_skills, embedder)
     similarities = cosine_similarity(raw_skill_embeddings, esco_embeddings)
     standardized_skills = []
     esco_skill_names = [skill["skill"] for skill in esco_skills]
@@ -243,7 +250,7 @@ def extract_cv_skills_from_text(cv_text: str, esco_skills: List[Dict[str, str]],
 def main():
     """Main function to run CV skill extraction and save to JSON."""
     esco_skills = load_esco_skills(ESCO_FILE_PATH)
-    embedder, embedder_tokenizer = load_embedder()
+    embedder = load_embedder()
     # For testing, use a PDF file path or fallback to sample text
     pdf_path = "data/sample_cv.pdf"  # Replace with your PDF path
     if not os.path.exists(pdf_path):
@@ -254,9 +261,9 @@ def main():
         Skills: Proficient in Python, Java, and SQL. Experienced in developing machine learning models and working in Agile environments. Strong problem-solving skills and effective communication for team collaboration.
         Projects: Developed an AI-powered Interview Simulation System using NLP and Python.
         """
-        skills = extract_cv_skills_from_text(cv_text, esco_skills, embedder, embedder_tokenizer)
+        skills = extract_cv_skills_from_text(cv_text, esco_skills, embedder)
     else:
-        skills = extract_cv_skills(pdf_path, esco_skills, embedder, embedder_tokenizer)
+        skills = extract_cv_skills(pdf_path, esco_skills, embedder)
     
     # Save skills to JSON file
     output_path = "data/cv_skills.json"
