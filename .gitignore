@@ -36,3 +36,6 @@ data/esco_skills.json
 data/esco_embeddings.npy
 data/*.pdf
 data/*.pdf
+
+data/cv_skills.json
+data/job_skills.json
