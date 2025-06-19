@@ -32,5 +32,5 @@ env/
 Thumbs.db
 
 # Large data files (track with Git LFS)
-# data/esco_skills.json
-# data/esco_embeddings.npy
+data/esco_skills.json
+data/esco_embeddings.npy
