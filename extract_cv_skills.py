@@ -68,7 +68,6 @@ def extract_text_from_pdf(pdf_path: str) -> str:
         logger.error(f"Error extracting text from PDF {pdf_path}: {e}")
         return ""
 
-# Load ESCO skills taxonomy
 def load_esco_skills(file_path: str) -> List[Dict[str, str]]:
     """Load ESCO skills taxonomy or use default subset."""
     if os.path.exists(file_path):
@@ -88,7 +87,6 @@ def load_esco_skills(file_path: str) -> List[Dict[str, str]]:
         {"skill": "Agile methodologies", "description": "Experience with Agile processes."}
     ]
 
-# Load embedder model
 def load_embedder():
     """Load sentence transformer model."""
     try:
@@ -198,25 +196,6 @@ def extract_cv_skills(pdf_path: str, esco_skills: List[Dict[str, str]], embedder
     logger.info(f"Raw skills: {raw_skills}")
     return {"standardized": list(set(standardized_skills)), "raw": list(set(raw_skills))}
 
-def main():
-    """Main function to run CV skill extraction."""
-    esco_skills = load_esco_skills(ESCO_FILE_PATH)
-    embedder, embedder_tokenizer = load_embedder()
-    # For testing, use a PDF file path or fallback to sample text
-    pdf_path = "data/sample_cv.pdf"  # Replace with your PDF path
-    if not os.path.exists(pdf_path):
-        logger.warning(f"PDF file {pdf_path} not found, using sample CV text.")
-        cv_text = """
-        Mahmoud Salama
-        Junior ML Engineer
-        Skills: Proficient in Python, Java, and SQL. Experienced in developing machine learning models and working in Agile environments. Strong problem-solving skills and effective communication for team collaboration.
-        Projects: Developed an AI-powered Interview Simulation System using NLP and Python.
-        """
-        skills = extract_cv_skills_from_text(cv_text, esco_skills, embedder, embedder_tokenizer)
-    else:
-        skills = extract_cv_skills(pdf_path, esco_skills, embedder, embedder_tokenizer)
-    print(json.dumps(skills, indent=2))
-
 def extract_cv_skills_from_text(cv_text: str, esco_skills: List[Dict[str, str]], embedder: Any, embedder_tokenizer: Any) -> Dict[str, List[str]]:
     """Extract and standardize skills from CV text (for fallback)."""
     skill_summary = summarize_cv(cv_text)
@@ -260,6 +239,37 @@ def extract_cv_skills_from_text(cv_text: str, esco_skills: List[Dict[str, str]],
     logger.info(f"Standardized skills: {standardized_skills}")
     logger.info(f"Raw skills: {raw_skills}")
     return {"standardized": list(set(standardized_skills)), "raw": list(set(raw_skills))}
+
+def main():
+    """Main function to run CV skill extraction and save to JSON."""
+    esco_skills = load_esco_skills(ESCO_FILE_PATH)
+    embedder, embedder_tokenizer = load_embedder()
+    # For testing, use a PDF file path or fallback to sample text
+    pdf_path = "data/sample_cv.pdf"  # Replace with your PDF path
+    if not os.path.exists(pdf_path):
+        logger.warning(f"PDF file {pdf_path} not found, using sample CV text.")
+        cv_text = """
+        Mahmoud Salama
+        Junior ML Engineer
+        Skills: Proficient in Python, Java, and SQL. Experienced in developing machine learning models and working in Agile environments. Strong problem-solving skills and effective communication for team collaboration.
+        Projects: Developed an AI-powered Interview Simulation System using NLP and Python.
+        """
+        skills = extract_cv_skills_from_text(cv_text, esco_skills, embedder, embedder_tokenizer)
+    else:
+        skills = extract_cv_skills(pdf_path, esco_skills, embedder, embedder_tokenizer)
+    
+    # Save skills to JSON file
+    output_path = "data/cv_skills.json"
+    try:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(skills, f, indent=2)
+        logger.info(f"Saved extracted skills to {output_path}")
+    except Exception as e:
+        logger.error(f"Failed to save skills to {output_path}: {e}")
+    
+    # Print skills for console output
+    print(json.dumps(skills, indent=2))
 
 if __name__ == "__main__":
     main()

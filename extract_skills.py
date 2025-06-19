@@ -48,7 +48,6 @@ except Exception as e:
     logger.error(f"Failed to initialize Gemini client: {e}")
     sys.exit(1)
 
-# Load ESCO skills taxonomy
 def load_esco_skills(file_path: str) -> List[Dict[str, str]]:
     """Load ESCO skills taxonomy or use default subset."""
     if os.path.exists(file_path):
@@ -68,7 +67,6 @@ def load_esco_skills(file_path: str) -> List[Dict[str, str]]:
         {"skill": "Agile methodologies", "description": "Experience with Agile processes."}
     ]
 
-# Load embedder model
 def load_embedder():
     """Load sentence transformer model."""
     try:
@@ -174,13 +172,25 @@ def extract_skills(job_description: str, esco_skills: List[Dict[str, str]], embe
     return {"standardized": list(set(standardized_skills)), "raw": list(set(raw_skills))}
 
 def main():
-    """Main function to run skill extraction."""
+    """Main function to run skill extraction and save to JSON."""
     esco_skills = load_esco_skills(ESCO_FILE_PATH)
     embedder, embedder_tokenizer = load_embedder()
     job_description = """
     We are seeking a Software Engineer proficient in Python, Java, and SQL. The candidate should have strong problem-solving skills and experience with Agile methodologies. Excellent communication skills are required to collaborate with cross-functional teams.
     """
     skills = extract_skills(job_description, esco_skills, embedder, embedder_tokenizer)
+    
+    # Save skills to JSON file
+    output_path = "data/job_skills.json"
+    try:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(skills, f, indent=2)
+        logger.info(f"Saved extracted skills to {output_path}")
+    except Exception as e:
+        logger.error(f"Failed to save skills to {output_path}: {e}")
+    
+    # Print skills for console output
     print(json.dumps(skills, indent=2))
 
 if __name__ == "__main__":
