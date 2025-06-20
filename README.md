@@ -1,4 +1,4 @@
-# 🧠 Skill Extraction with ESCO + Gemini  
+# 🧠 Skill Extraction 
 **Extract technical and soft skills from job descriptions and CVs and standardize them using the ESCO taxonomy (v1.2.0)**
 
 [![GitHub Stars](https://img.shields.io/github/stars/MahmoudSalama7/Employment_Match)](https://github.com/MahmoudSalama7/Employment_Match)  
