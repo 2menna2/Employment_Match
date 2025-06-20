@@ -1,98 +1,119 @@
-Skill Extraction Project
-A Python project to extract technical and soft skills from job descriptions and CVs (text or PDF), standardizing them against the ESCO taxonomy (v1.2.0) using the Google Gemini API and sentence transformers.
-Overview
-This project processes job descriptions and CVs to identify required or listed skills, producing both raw skills (as listed in the input) and standardized skills (mapped to the ESCO taxonomy). It leverages the Google Gemini API (gemini-1.5-flash) for skill summarization and sentence-transformers/all-MiniLM-L6-v2 for embedding-based skill matching, with fuzzy matching as a fallback. The ESCO v1.2.0 skills taxonomy is sourced from skills_en.csv (converted to data/esco_skills.json), containing approximately 13,939 skills. Embeddings are precomputed using generate_embeddings.py and saved to data/esco_embeddings.npy for efficiency. CVs in PDF format are supported using PyPDF2. The project is hosted at https://github.com/MahmoudSalama7/Employment_Match.
-Features
+# 🧠 Skill Extraction with ESCO + Gemini  
+**Extract technical and soft skills from job descriptions and CVs and standardize them using the ESCO taxonomy (v1.2.0)**
 
-Extracts technical and soft skills from job descriptions and CVs (text or PDF).
-Standardizes skills against the ESCO v1.2.0 taxonomy using cosine similarity and fuzzy matching.
-Supports batch processing for efficient handling of large ESCO datasets (~13,939 skills).
-Precomputes and reuses ESCO skill embeddings for faster execution.
-Configurable similarity and fuzzy matching thresholds for performance optimization.
-Comprehensive logging with top-3 matches for troubleshooting skill standardization.
-Converts ESCO CSV data (skills_en.csv) to JSON format for compatibility.
-Extracts text from PDF CVs using PyPDF2.
+[![GitHub Stars](https://img.shields.io/github/stars/MahmoudSalama7/Employment_Match)](https://github.com/MahmoudSalama7/Employment_Match)  
+[![MIT License](https://img.shields.io/github/license/MahmoudSalama7/Employment_Match)](LICENSE)
 
-Prerequisites
+---
 
-Python: 3.10
-Git: For cloning the repository
-Google Gemini API Key: Obtain from https://makersuite.google.com/
-ESCO v1.2.0 Skills Taxonomy: Download skills_en.csv from https://esco.ec.europa.eu/en/download (select English, CSV, Skills, Classification)
-Git LFS: For handling large files (esco_skills.json, esco_embeddings.npy)
+## 🔍 Overview  
+This Python-based tool extracts **technical** and **soft skills** from job descriptions or CVs (PDF or text) and maps them to the standardized [ESCO skills taxonomy](https://esco.ec.europa.eu/en/download) using:
 
-Setup
+- **Google Gemini API** (`gemini-1.5-flash`)
+- **Sentence Transformers** (`all-MiniLM-L6-v2`)
+- **Fuzzy Matching** as fallback
 
-Clone the Repository:
+---
+
+## 🚀 Features
+
+✅ Extracts skills from **text or PDF** (via PyPDF2)  
+✅ Maps to ESCO v1.2.0 (~13,939 skills)  
+✅ Uses **sentence-transformers** for semantic matching  
+✅ Supports **batch processing** for fast lookups  
+✅ Precomputes and caches embeddings for speed  
+✅ Top-3 match logging for debugging  
+✅ Configurable thresholds for matching  
+✅ Converts ESCO CSV to JSON
+
+---
+
+## 📦 Setup
+
+### 1. Clone the Repository
+
+```bash
 git clone https://github.com/MahmoudSalama7/Employment_Match.git
 cd Employment_Match
+```
 
+### 2. Create and Activate Virtual Environment
 
-Create and Activate a Virtual Environment:
+```bash
 python -m venv employ
-.\employ\Scripts\activate  # On Windows
-source employ/bin/activate  # On Linux/Mac
+.\employ\Scripts\activate         # Windows
+source employ/bin/activate        # Linux/Mac
+```
 
+### 3. Install Dependencies
 
-Install Dependencies:
+```bash
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 pip install torch==2.0.1 -i https://download.pytorch.org/whl/cpu
+```
 
+---
 
-The -i https://pypi.tuna.tsinghua.edu.cn/simple uses a mirror for faster downloads in some regions.
-torch is installed from a CPU-specific wheel to avoid GPU dependencies.
+## 🔑 Configure Gemini API
 
+Create a `.env` file in the root:
 
-Set Up the Gemini API Key:
+```bash
+echo GEMINI_API_KEY=your-gemini-api-key-here > .env
+```
 
-Create a .env file in the project root:echo GEMINI_API_KEY=your-gemini-api-key-here > .env
+Replace with your actual key from [Google MakerSuite](https://makersuite.google.com/).
 
+---
 
-Replace your-gemini-api-key-here with your
+## 📚 Prepare ESCO Dataset
 
+1. Download `skills_en.csv` from [ESCO v1.2.0 Download Page](https://esco.ec.europa.eu/en/download)  
+2. Move it to the `data/` folder:
 
-Prepare the ESCO Skills Taxonomy:
+```bash
+mkdir data
+# Windows
+copy C:\Users\LENOVO\Downloads\skills_en.csv\skills_en.csv data\skills_en.csv
+# Linux/Mac
+cp ~/Downloads/skills_en.csv/skills_en.csv data/skills_en.csv
+```
 
-Download the ESCO v1.2.0 skills dataset (skills_en.csv) from https://esco.ec.europa.eu/en/download.
-Move skills_en.csv to the data/ folder:mkdir data
-copy C:\Users\LENOVO\Downloads\skills_en.csv\skills_en.csv data\skills_en.csv  # On Windows
-cp ~/Downloads/skills_en.csv/skills_en.csv data/skills_en.csv  # On Linux/Mac
+3. Convert CSV to JSON:
 
+```bash
+python convert_esco_to_json.py
+```
 
-Convert skills_en.csv to data/esco_skills.json:python convert_esco_to_json.py
+---
 
+## 🧠 Generate ESCO Embeddings
 
+```bash
+python generate_embeddings.py
+```
 
+This creates `data/esco_embeddings.npy`.
 
-Generate Precomputed Embeddings:
+---
 
-Run the embedding generation script (only needed once or when esco_skills.json changes):python generate_embeddings.py
+## 🛠️ Usage
 
+1. Modify `job_description` in `extract_skills.py`:
 
-This creates data/esco_embeddings.npy. If it fails with a name 'torch' is not defined error, ensure the script includes import torch and reinstall dependencies.
+```python
+job_description = """Your job description text here."""
+```
 
+2. Run the script:
 
-Run the Script:
+```bash
 python extract_skills.py
+```
 
+### ✅ Sample Output
 
-This processes a sample job description and outputs extracted and standardized skills in JSON format.
-
-
-
-Usage
-
-Modify the Job Description:
-
-Edit the job_description variable in extract_skills.py:job_description = """Your custom job description here."""
-
-
-Run the script to extract skills:python extract_skills.py
-
-
-
-
-Expected Output:
+```json
 {
   "standardized": [
     "Python (computer programming)",
@@ -111,135 +132,118 @@ Expected Output:
     "communication skills"
   ]
 }
+```
 
+---
 
-Configuration Options:
+## ⚙️ Configuration
 
-SIMILARITY_THRESHOLD (default: 0.4): Controls embedding-based skill matching sensitivity.
-FUZZY_THRESHOLD (default: 90): Controls fuzzy matching sensitivity for low-similarity skills.
-BATCH_SIZE (default: 100): Adjusts memory usage for embedding large ESCO datasets.
-EMBEDDER_MODEL: Switch to sentence-transformers/all-mpnet-base-v2 for improved matching if needed.
+| Parameter              | Default | Description                                    |
+|------------------------|---------|------------------------------------------------|
+| `SIMILARITY_THRESHOLD` | 0.4     | Cosine similarity threshold                    |
+| `FUZZY_THRESHOLD`      | 90      | Fallback fuzzy match threshold                 |
+| `BATCH_SIZE`           | 100     | Controls memory use for batch embedding        |
+| `EMBEDDER_MODEL`       | `all-MiniLM-L6-v2` | Can switch to `all-mpnet-base-v2` |
 
+---
 
+## 📁 Project Structure
 
-Folder Structure
+```
+Employment_Match/
+│
+├── data/
+│   ├── skills_en.csv
+│   ├── esco_skills.json
+│   └── esco_embeddings.npy
+│
+├── extract_skills.py
+├── convert_esco_to_json.py
+├── generate_embeddings.py
+├── requirements.txt
+├── .env
+└── README.md
+```
 
-data/:
-skills_en.csv: ESCO v1.2.0 skills taxonomy (CSV)
-esco_skills.json: Converted ESCO skills in JSON format
-esco_embeddings.npy: Precomputed ESCO skill embeddings
+---
 
+## 🧪 Troubleshooting
 
-docs/: Documentation (currently empty)
-tests/: Unit tests (currently empty)
-extract_skills.py: Main skill extraction script
-convert_esco_to_json.py: Script to convert ESCO CSV to JSON
-generate_embeddings.py: Script to precompute ESCO embeddings
-requirements.txt: Python dependencies
-.env: Environment variables (not tracked by Git)
-.gitignore: Excludes .env, virtual environment, and large data files
-README.md: This file
+### ❌ Empty Standardized Skills?
 
-Dependencies
-Listed in requirements.txt:
-transformers==4.44.2
-torch==2.0.1
-sentence-transformers==2.2.2
-numpy==1.25.2
-scikit-learn==1.3.0
-accelerate==0.21.0
-setuptools==70.0.0
-python-dotenv==1.0.1
-google-generativeai==0.7.2
-rapidfuzz==3.9.7
+- Lower similarity thresholds:
 
-Troubleshooting
-
-Empty or Incorrect standardized Skills:
-
-Check logs for Top-3 matches and Fuzzy match entries in the terminal output.
-Lower SIMILARITY_THRESHOLD to 0.3 or FUZZY_THRESHOLD to 80 in extract_skills.py:SIMILARITY_THRESHOLD = 0.3
+```python
+SIMILARITY_THRESHOLD = 0.3
 FUZZY_THRESHOLD = 80
+```
 
+- Switch embedder:
 
-Try a stronger embedder:EMBEDDER_MODEL = "sentence-transformers/all-mpnet-base-v2"
+```python
+EMBEDDER_MODEL = "sentence-transformers/all-mpnet-base-v2"
+```
 
+Then:
 
-Update requirements.txt:echo "sentence-transformers==2.7.0" >> requirements.txt
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```bash
+pip install sentence-transformers==2.7.0
+python generate_embeddings.py
+```
 
+### 🧠 Memory Issues?
 
-Regenerate embeddings:python generate_embeddings.py
+Reduce batch size:
 
+```python
+BATCH_SIZE = 50
+```
 
+### 🔐 Gemini API Errors?
 
+- Check key in `.env`
+- Check usage limits on MakerSuite
+- Review logs
 
+---
 
+## 🧬 Extend the Dataset
 
-Memory Issues:
+ESCO also provides:
+- `occupationSkillRelations_en.csv`: Link occupations to skills
+- `skillGroups_en.csv`: Grouped skill hierarchies
 
-Reduce BATCH_SIZE to 50 in extract_skills.py and generate_embeddings.py if processing ~13,939 skills causes errors:BATCH_SIZE = 50
+_Not yet integrated, but useful for future development._
 
+---
 
+## 📌 Contributing
 
+1. Fork the repo  
+2. Create a feature branch:
 
-Gemini API Errors:
+```bash
+git checkout -b feature/your-feature
+```
 
-Verify your API key in .env.
-Check usage limits at https://makersuite.google.com/.
-Review error messages in logs and consult https://ai.google.dev/docs.
+3. Commit and push:
 
+```bash
+git commit -m "Your feature"
+git push origin feature/your-feature
+```
 
-Embedding Generation Errors:
+4. Open a Pull Request
 
-If generate_embeddings.py fails, ensure import torch is included and torch==2.0.1 is installed.
-Verify data/esco_skills.json exists and is valid.
+---
 
+## 📄 License
 
-Slow Downloads:
+MIT License. See [LICENSE](LICENSE) for more.
 
-Install hf_xet for faster Hugging Face model downloads:pip install hf_xet -i https://pypi.tuna.tsinghua.edu.cn/simple
+---
 
+## 📬 Contact
 
-
-
-Large File Handling:
-
-If data/esco_skills.json or data/esco_embeddings.npy exceeds 100MB, use Git LFS:git lfs install
-git lfs track "data/esco_skills.json"
-git lfs track "data/esco_embeddings.npy"
-git add .gitattributes data/esco_skills.json data/esco_embeddings.npy
-git commit -m "Track large files with Git LFS"
-git push origin main
-
-
-
-
-
-Additional ESCO Files
-The ESCO v1.2.0 dataset in C:\Users\LENOVO\Downloads\skills_en.csv\ includes additional files:
-
-occupations_en.csv: Occupation taxonomy.
-occupationSkillRelations_en.csv: Maps skills to occupations.
-skillGroups_en.csv: Hierarchical skill groups.
-Others: Specialized collections (e.g., digitalSkillsCollection_en.csv, greenSkillsCollection_en.csv).
-
-Only skills_en.csv is used currently. To incorporate files like occupationSkillRelations_en.csv for job-skill matching, extend the script as needed.
-Contributing
-
-Fork the repository: https://github.com/MahmoudSalama7/Employment_Match.
-Create a feature branch:git checkout -b feature/your-feature
-
-
-Commit changes:git commit -m "Add your feature"
-
-
-Push to the branch:git push origin feature/your-feature
-
-
-Open a pull request.
-
-License
-MIT License
-Contact
-For issues or feature requests, open an issue at https://github.com/MahmoudSalama7/Employment_Match/issues.
+Got questions or feature requests?  
+👉 [Open an issue](https://github.com/MahmoudSalama7/Employment_Match/issues)
