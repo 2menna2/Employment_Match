@@ -19,6 +19,7 @@ env/
 # Temporary files
 *.log
 *.tmp
+temp/
 *.bak
 
 # IDE/Editor files
@@ -39,3 +40,7 @@ data/*.pdf
 
 data/cv_skills.json
 data/job_skills.json
+
+# ChromaDB temporary storage
+chroma_*
+
